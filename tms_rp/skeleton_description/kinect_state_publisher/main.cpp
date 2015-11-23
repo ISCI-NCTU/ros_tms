@@ -28,7 +28,7 @@ class KinectStatePublisher
     KinectStatePublisher(
         ros::NodeHandle& nh,
         const std::vector<KDL::Tree>& kdl_forest,
-				const std::vector<int>& cameraID_array);
+        const std::vector<int>& cameraID_array);
     ~KinectStatePublisher();
 
     void run();
@@ -43,8 +43,8 @@ class KinectStatePublisher
     std::vector<robot_state_publisher::RobotStatePublisher> state_pubs_;
     std::vector<tf::StampedTransform> transforms_;
 
-		std::vector<Eigen::Vector3d> pos_;
-		std::vector<Eigen::Quaterniond> rot_;
+    std::vector<Eigen::Vector3d> pos_;
+    std::vector<Eigen::Quaterniond> rot_;
 
     void callback(const tms_msg_ss::SkeletonStreamWrapper::ConstPtr& msg);
 };
@@ -57,13 +57,13 @@ KinectStatePublisher::KinectStatePublisher(
   nh_(nh),
   cameraID_array_(cameraID_array)
 {
-	ros::Time now = ros::Time::now() + GMT;
+  ros::Time now = ros::Time::now() + GMT;
   for (int i=0; i<cameraID_array_.size(); i++)
   {
     std::stringstream subscribe_topic;
     subscribe_topic << "skeleton_stream_wrapper" << cameraID_array_[i];
     data_subs_.push_back(nh_.subscribe(subscribe_topic.str(), 1,
-					&KinectStatePublisher::callback, this));
+          &KinectStatePublisher::callback, this));
 
     state_pubs_.push_back(robot_state_publisher::RobotStatePublisher(kdl_forest[i]));
 
@@ -74,8 +74,8 @@ KinectStatePublisher::KinectStatePublisher(
       now, PARENT_LINK, tf::resolve(tf_prefix.str(),CHILD_LINK)));
   } 
 
-	pos_.resize(cameraID_array_.size());
-	rot_.resize(cameraID_array_.size());
+  pos_.resize(cameraID_array_.size());
+  rot_.resize(cameraID_array_.size());
 
   return;
 }
@@ -89,22 +89,22 @@ KinectStatePublisher::~KinectStatePublisher()
 //------------------------------------------------------------------------------
 void KinectStatePublisher::callback(const tms_msg_ss::SkeletonStreamWrapper::ConstPtr& msg)
 {
-	int camera_num = (int)msg->camera_number;
+  int camera_num = (int)msg->camera_number-1;
 
-	ROS_INFO("kinect%d: Received posture.", camera_num);
+  ROS_INFO("kinect%d: Received posture.", camera_num);
 
-	tms_msg_ss::CameraPosture camera_posture = msg->camera_posture;
-	rot_[camera_num] = Eigen::Quaterniond(
-			camera_posture.rotation.w,
-			camera_posture.rotation.x,
-			camera_posture.rotation.y,
-			camera_posture.rotation.z);
-	pos_[camera_num] = Eigen::Vector3d(
-			camera_posture.translation.x,
-			camera_posture.translation.y,
-			camera_posture.translation.z);
+  tms_msg_ss::CameraPosture camera_posture = msg->camera_posture;
+  rot_[camera_num] = Eigen::Quaterniond(
+      camera_posture.rotation.w,
+      camera_posture.rotation.x,
+      camera_posture.rotation.y,
+      camera_posture.rotation.z);
+  pos_[camera_num] = Eigen::Vector3d(
+      camera_posture.translation.x,
+      camera_posture.translation.y,
+      camera_posture.translation.z);
 
-	return;
+  return;
 }
 
 //------------------------------------------------------------------------------
@@ -117,11 +117,11 @@ void KinectStatePublisher::run()
 
     ros::Time time = ros::Time::now() + GMT + sleeper;
 
-		for (int i=0; i<cameraID_array_.size(); i++)
-		{
-			tf::Quaternion q(rot_[i].x(), rot_[i].y(), rot_[i].z(), rot_[i].w());
-			transforms_[i].setData(tf::Transform(q, tf::Vector3(pos_[i][0],pos_[i][1],pos_[i][2])));
-		}
+    for (int i=0; i<cameraID_array_.size(); i++)
+    {
+      tf::Quaternion q(rot_[i].x(), rot_[i].y(), rot_[i].z(), rot_[i].w());
+      transforms_[i].setData(tf::Transform(q, tf::Vector3(pos_[i][0],pos_[i][1],pos_[i][2])));
+    }
 
     this->send(time);
 
@@ -134,14 +134,14 @@ void KinectStatePublisher::run()
 void KinectStatePublisher::send(ros::Time time)
 {
   std::map<std::string, double> joint_states;
-	for (int i=0; i<cameraID_array_.size(); i++)
-	{
-		transforms_[i].stamp_ = time;
+  for (int i=0; i<cameraID_array_.size(); i++)
+  {
+    transforms_[i].stamp_ = time;
     std::stringstream tf_prefix;
     tf_prefix << "kinect" << cameraID_array_[i];
-		broadcaster_.sendTransform(transforms_[i]);
+    broadcaster_.sendTransform(transforms_[i]);
     state_pubs_[i].publishTransforms(joint_states, time, tf_prefix.str());
-	}
+  }
   return;
 }
 
